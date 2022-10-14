@@ -6,6 +6,8 @@ import os
 from tqdm import tqdm
 
 
+
+
 class ExampleProgram:
 
     def __init__(self):
@@ -17,7 +19,7 @@ class ExampleProgram:
         collection = self.db.create_collection(collection_name)    
         print('Created collection: ', collection)
 
-    def insert_documents(self, collection_name):
+    def insert_activities(self, collection_name):
         docs = [
             {
                 "_id": 1,
@@ -44,10 +46,10 @@ class ExampleProgram:
         collection = self.db[collection_name]
         collection.insert_many(docs)
         
-    def fetch_documents(self, collection_name):
+    def fetch_activities(self, collection_name):
         collection = self.db[collection_name]
-        documents = collection.find({})
-        for doc in documents: 
+        activities = collection.find({})
+        for doc in activities: 
             print(doc)
         
 
@@ -68,6 +70,9 @@ class Part1:
         self.client = self.connection.client
         self.db = self.connection.db
         self.base_path = os.path.join("dataset", "Data")
+
+        self.trackpointsum = 0
+        self.trackpointsum_nofilter = 0
 
     def create_coll(self, collection_name):
         collection = self.db.create_collection(collection_name)    
@@ -156,13 +161,14 @@ class Part1:
             #Step 1:
             # get_activities = "SELECT id, start_date_time, end_date_time FROM Activity where user_id = '%s' ORDER BY start_date_time, end_date_time"
             # self.cursor.execute(get_activities % (folder))
-            # documents = self.cursor.fetchall()
+            # activities = self.cursor.fetchall()
 
             collection = self.db['Activity']
-            documents = list(collection.find())
+            activities = list(collection.find({'user_id': folder}))
+            activities = sorted(activities, key = lambda obj: (obj['start_date_time'], obj['end_date_time']))
             
 
-            if len(documents) == 0:
+            if len(activities) == 0:
                 continue
 
             #Step 2:
@@ -191,12 +197,15 @@ class Part1:
    
             #Step 3:
 
-            self.find_matching_activities(documents, docs)
+            self.find_matching_activities(activities, docs)
     
             #Step 4:
             
+            self.trackpointsum_nofilter += len(docs)
 
             docs = list(filter(lambda obj: obj['activity_id'] is not None, docs))
+
+            self.trackpointsum += len(docs)
 
             if len(docs) > 0:
 
@@ -219,7 +228,7 @@ class Part1:
             lower_bound = 0
             upper_bound = len(activities) - 1
 
-            #success = False
+            success = False
 
             while lower_bound < upper_bound:
 
@@ -237,16 +246,16 @@ class Part1:
                 #Found a corresponding activity
                 else:
                     data[i]['activity_id'] = activities[j]['_id']
-                    # success = True
+                    success = True
                     break
 
-            # if not success:
-            #      data[i]['activity_id'] = None
+            if not success:
+                data[i]['activity_id'] = None
         
-    def fetch_documents(self, collection_name):
+    def fetch_activities(self, collection_name):
         collection = self.db[collection_name]
-        documents = collection.find({})
-        for doc in documents: 
+        activities = collection.find({})
+        for doc in activities: 
             pprint(doc)
         
 
@@ -259,24 +268,26 @@ class Part1:
         collections = self.client['test'].list_collection_names()
         print(collections)
 
+        print(self.trackpointsum, self.trackpointsum_nofilter)
+
 
 
 def main():
     program = None
     try:
         program = Part1()
-        # program.create_coll(collection_name="User")
-        # program.create_coll(collection_name="Activity")
+        program.create_coll(collection_name="User")
+        program.create_coll(collection_name="Activity")
         program.create_coll(collection_name="TrackPoint")
 
-        # program.insert_users()
-        # program.insert_activitydata()
+        program.insert_users()
+        program.insert_activitydata()
         program.insert_trackPointdata()
 
         program.show_coll()
-        program.fetch_documents(collection_name="User")
-        program.fetch_documents(collection_name="Activity")
-        program.fetch_documents(collection_name="TrackPoint")
+        # program.fetch_activities(collection_name="User")
+        # program.fetch_activities(collection_name="Activity")
+        # program.fetch_activities(collection_name="TrackPoint")
 
         #TODO: REMOVE LATER
         # program.drop_coll(collection_name='User')
@@ -284,11 +295,11 @@ def main():
         #program.drop_coll(collection_name='TrackPoint')
         
         # Check that the table is dropped
-        program.show_coll()
+        # program.show_coll()
     except Exception as e:
-        #program.drop_coll(collection_name='User')
-        #program.drop_coll(collection_name='Activity')
-        program.drop_coll(collection_name='TrackPoint')
+        # program.drop_coll(collection_name='User')
+        # program.drop_coll(collection_name='Activity')
+        # program.drop_coll(collection_name='TrackPoint')
 
         print("ERROR: Failed to use database:", e)
     finally:
@@ -301,13 +312,14 @@ def main_example():
         program = ExampleProgram()
         program.create_coll(collection_name="Person")
         program.show_coll()
-        program.insert_documents(collection_name="Person")
-        program.fetch_documents(collection_name="Person")
+        program.insert_activities(collection_name="Person")
+        program.fetch_activities(collection_name="Person")
         program.drop_coll(collection_name="Person")
         # program.drop_coll(collection_name='person')
         # program.drop_coll(collection_name='users')
         # Check that the table is dropped
         program.show_coll()
+
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
