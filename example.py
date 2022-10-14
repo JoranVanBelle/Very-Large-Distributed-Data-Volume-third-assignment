@@ -1,6 +1,9 @@
 from pprint import pprint 
 from DbConnector import DbConnector
 
+import os
+from tqdm import tqdm
+
 
 class ExampleProgram:
 
@@ -56,6 +59,7 @@ class ExampleProgram:
         collections = self.client['test'].list_collection_names()
         print(collections)
          
+
 
 
 def main():

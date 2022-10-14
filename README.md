@@ -25,7 +25,7 @@ To be able to run the files inside the folder "exercise2-files", you should down
 
 1. install virtualenv.
 2. Create and activate a virtual env: ```python -m venv .\venv\Scripts\activate```.
-3. Install the required packages: ```python -m pip install -r .\exercise2-files\requirements.txt```.
+3. Install the required packages: ```python -m pip install -r requirements.txt```.
 4. You also have to create a ```.env``` file before you can run the ```example.py```. The content of this file is sent in the Whatssapp group.
 
 ## MongoDB
