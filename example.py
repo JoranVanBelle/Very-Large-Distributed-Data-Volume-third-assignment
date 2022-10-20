@@ -7,62 +7,6 @@ from tqdm import tqdm
 
 
 
-
-class ExampleProgram:
-
-    def __init__(self):
-        self.connection = DbConnector()
-        self.client = self.connection.client
-        self.db = self.connection.db
-
-    def create_coll(self, collection_name):
-        collection = self.db.create_collection(collection_name)    
-        print('Created collection: ', collection)
-
-    def insert_activities(self, collection_name):
-        docs = [
-            {
-                "_id": 1,
-                "name": "Bobby",
-                "courses": 
-                    [
-                    {'code':'TDT4225', 'name': ' Very Large, Distributed Data Volumes'},
-                    {'code':'BOI1001', 'name': ' How to become a boi or boierinnaa'}
-                    ] 
-            },
-            {
-                "_id": 2,
-                "name": "Bobby",
-                "courses": 
-                    [
-                    {'code':'TDT02', 'name': ' Advanced, Distributed Systems'},
-                    ] 
-            },
-            {
-                "_id": 3,
-                "name": "Bobby",
-            }
-        ]  
-        collection = self.db[collection_name]
-        collection.insert_many(docs)
-        
-    def fetch_activities(self, collection_name):
-        collection = self.db[collection_name]
-        activities = collection.find({})
-        for doc in activities: 
-            print(doc)
-        
-
-    def drop_coll(self, collection_name):
-        collection = self.db[collection_name]
-        collection.drop()
-
-        
-    def show_coll(self):
-        collections = self.client['test'].list_collection_names()
-        print(collections)
-         
-
 class Part1:
 
     def __init__(self):
@@ -75,10 +19,23 @@ class Part1:
         self.trackpointsum_nofilter = 0
 
     def create_coll(self, collection_name):
+        """Creates a collection inside the MongoDB database.
+
+        Args:
+            collection_name (str): The name of the collection to create.
+        """        
+
         collection = self.db.create_collection(collection_name)    
         print('Created collection: ', collection)
 
     def insert_users(self, collection_name = "User"):   
+        """ This function inserts the user data into the user collection of our database.
+            The data for the "has_labels" field is extracted from the labeld_ids.txt file.
+            The user_ids themselves are just the names of the folders in the Data folder of the dataset.
+
+        Args:
+            collection_name (string): The name of the collection we want to insert the data into. Defaults to "User".
+        """        
 
         with open(os.path.join("dataset", 'labeled_ids.txt')) as file:
             users_with_labels = file.readlines()
@@ -96,6 +53,16 @@ class Part1:
         collection.insert_many(docs)
 
     def insert_activitydata(self, collection_name = "Activity"):
+        """ This function inserts the activities into the activity collection of our database.
+            
+            Since only the folders of the users with "has_labels = 1" contain activity data, we only need to process these users.
+            After parsing all the activities, we add the activites to our activity collection in the database.
+
+
+        Args:
+            collection_name (string): The name of the collection we want to insert the data into. Defaults to "Activity".
+        """   
+
         docs = []
 
 
@@ -153,15 +120,29 @@ class Part1:
         collection.insert_many(docs)
 
     def insert_trackPointdata(self, collection_name = "TrackPoint"):
+        """ This function inserts the trackpoints into the trackpoint collection of our database.
+            For this the function loops through all the users, and then performs the following steps:
+                1. Get all the activities corresponding to this user from the activities collection.
+                   If the user has no activities, we continue with the next user.
+                2. We parse the trackpoints from the .plt files for this user. 
+                   We skip those .plt files that contain more than 2,500 trackpoints.
+                3. We use the find_matching_activities function find the corresponding activity for each trackpoint.
+                   If we don't find a activity at the timestamp of the trackpoint, we don't add the trackpoint to the database.
+                4. We add all the relecant trackpoints to the MongoDB collection.
+
+
+
+        Args:
+            collection_name (string): The name of the collection we want to insert the data into. Defaults to "TrackPoint".
+        """        
+
+
         print("----------------------------------")
         print("Parsing and adding Trackpoints to the Database")       
         print("----------------------------------")
         for folder in tqdm(os.listdir(self.base_path)):
 
             #Step 1:
-            # get_activities = "SELECT id, start_date_time, end_date_time FROM Activity where user_id = '%s' ORDER BY start_date_time, end_date_time"
-            # self.cursor.execute(get_activities % (folder))
-            # activities = self.cursor.fetchall()
 
             collection = self.db['Activity']
             activities = list(collection.find({'user_id': folder}))
@@ -216,6 +197,12 @@ class Part1:
             
 
     def find_matching_activities(self, activities, data):
+        """This is a helper function which allows us to efficiently find the matching activities for a given trackpoint.
+
+        Args:
+            activities (list): A list with all the rows of the activities for a given user.
+            data (list): A list with all the necassary information about the trackpoints. This function then adds the activities_ids to the data.
+        """     
         
         print("----------------------------------")
         print(f"Finding matching activities for {len(data)} Trackpoints and {len(activities)} activities")       
@@ -288,39 +275,13 @@ def main():
         # program.fetch_activities(collection_name="User")
         # program.fetch_activities(collection_name="Activity")
         # program.fetch_activities(collection_name="TrackPoint")
-
-        #TODO: REMOVE LATER
-        # program.drop_coll(collection_name='User')
-        # program.drop_coll(collection_name='Activity')
-        #program.drop_coll(collection_name='TrackPoint')
         
-        # Check that the table is dropped
-        # program.show_coll()
+        
     except Exception as e:
         # program.drop_coll(collection_name='User')
         # program.drop_coll(collection_name='Activity')
         # program.drop_coll(collection_name='TrackPoint')
 
-        print("ERROR: Failed to use database:", e)
-    finally:
-        if program:
-            program.connection.close_connection()
-
-def main_example():
-    program = None
-    try:
-        program = ExampleProgram()
-        program.create_coll(collection_name="Person")
-        program.show_coll()
-        program.insert_activities(collection_name="Person")
-        program.fetch_activities(collection_name="Person")
-        program.drop_coll(collection_name="Person")
-        # program.drop_coll(collection_name='person')
-        # program.drop_coll(collection_name='users')
-        # Check that the table is dropped
-        program.show_coll()
-
-    except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
         if program:
